@@ -1,0 +1,20 @@
+<template>
+    <div class="slds-grid slds-wrap list">
+        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-1 slds-large-size_2-of-12">
+            <div class="slds-align_absolute-center">
+                <img src={item.picture} class="picture">
+            </div>
+        </div>
+        
+        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-1 slds-large-size_8-of-12">
+            <div class="slds-text-align_center">
+                <div class="slds-page-header__title">{item.name}</div>
+                <div class="slds-text-body_small slds-var-m-vertical_small">{item.description}</div>
+            </div>
+        </div>
+
+        <div class="slds-col slds-size_1-of-1 slds-small-size_1-of-1 slds-large-size_2-of-12">
+            <lightning-badge label={item.type} class={labelStyle}></lightning-badge>
+        </div>
+    </div>
+</template>

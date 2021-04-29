@@ -1,0 +1,8 @@
+.draggable_area {
+    height: 300px;
+}
+
+.dragover {
+    background-color: #ebc3c3;
+    opacity: .25;
+}

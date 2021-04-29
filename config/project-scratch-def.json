@@ -1,5 +1,14 @@
 {
   "orgName": "spinner-org",
   "edition": "Developer",
-  "features": []
+  "features": [],
+  "language": "en",
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "mobileSettings": {
+        "enableS1EncryptedStoragePref2": false
+    }
+  }
 }

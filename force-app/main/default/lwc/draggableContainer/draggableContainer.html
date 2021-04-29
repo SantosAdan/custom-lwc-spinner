@@ -1,0 +1,79 @@
+<template>
+    <lightning-tabset variant="scoped">
+        <lightning-tab label="Items">
+            <lightning-layout horizontal-align="center" multiple-rows>
+                
+                <lightning-layout-item padding="around-small" size="6" small-device-size="12" medium-device-size="6" large-device-size="6">
+                    <lightning-card title="Disponíveis" icon-name="standard:output" variant="narrow">
+                        <template if:true={isLoading}>
+                            <c-custom-spinner size="large"></c-custom-spinner>
+                        </template>
+
+                        <div 
+                            class="unselectedDropzone draggable_area slds-scrollable_y"
+                            ondragover={handleDragOver} 
+                            ondrop={handleDropAvailable}
+                        >
+                            <lightning-layout multiple-rows>
+                                <template for:each={items} for:item="item">
+                                    <lightning-layout-item 
+                                        key={item.index} 
+                                        size="12" 
+                                        small-device-size="6"
+                                        medium-device-size="4" 
+                                        large-device-size="12"
+                                    >
+                                        <div 
+                                            id={item.index}
+                                            data-index={item.index}
+                                            draggable="true" 
+                                            ondragstart={handleDragStartAvailable}
+                                        >
+                                            <c-draggable-item item={item}></c-draggable-item>
+                                        </div>
+                                    </lightning-layout-item>
+                                </template>
+                            </lightning-layout>
+                        </div>
+                    </lightning-card>
+                </lightning-layout-item>
+                
+                <lightning-layout-item padding="around-small" size="6" small-device-size="12"
+                medium-device-size="6" large-device-size="6">
+                    <lightning-card title="Selecionados" icon-name="standard:task2">
+                        <template if:true={isLoading}>
+                            <c-custom-spinner size="large"></c-custom-spinner>
+                        </template>
+                        <div
+                            class="selectedDropzone draggable_area slds-scrollable_y"
+                            ondragover={handleDragOver} 
+                            ondrop={handleDropSelected}
+                        >
+                            <lightning-layout multiple-rows>
+                                <template for:each={selectedItems} for:item="item">
+                                    <lightning-layout-item 
+                                        key={item.index} 
+                                        size="12" 
+                                        small-device-size="6"
+                                        medium-device-size="4" 
+                                        large-device-size="12"
+                                    >
+                                        <div 
+                                            id={item.index} 
+                                            data-index={item.index}
+                                            draggable="true" 
+                                            ondragstart={handleDragStartSelected}
+                                        >
+                                            <c-draggable-item item={item}></c-draggable-item>
+                                        </div>
+                                    </lightning-layout-item>
+                                </template>
+                            </lightning-layout>
+                        </div>
+                    </lightning-card>
+                </lightning-layout-item>
+            
+            </lightning-layout>
+        </lightning-tab>
+    </lightning-tabset>
+</template>
