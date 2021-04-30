@@ -1,5 +1,17 @@
 {
   "orgName": "spinner-org",
   "edition": "Developer",
-  "features": []
+  "features": ["ServiceCloud"],
+  "language": "en_US",
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "mobileSettings": {
+      "enableS1EncryptedStoragePref2": false
+    },
+    "caseSettings": {
+      "systemUserEmail": "adan@cbcloud.com.br"
+    }
+  }
 }

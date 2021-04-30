@@ -1,0 +1,51 @@
+<template>
+
+    <lightning-card title="Dynamic Dependent Picklist">
+        <template if:true={isLoading}>
+            <c-custom-spinner size="small" variant="brand"></c-custom-spinner>
+        </template>
+        <template if:true={hasFirstLevel}>
+            <div class="slds-var-m-around_small">
+                <c-searchable-combobox 
+                    label="Primeiro nível" 
+                    options={firstLevelOptions} 
+                    selected-value={selectedFirstLevelName} 
+                    onselect={handleChange}
+                    data-name="firstLevel">
+                </c-searchable-combobox>
+            </div>
+        </template>
+
+
+        <template if:true={hasSecondLevel}>
+            <div class="slds-var-m-around_small">
+                <c-searchable-combobox 
+                    label="Segundo nível" 
+                    options={secondLevelOptions} 
+                    selected-value={selectedSecondLevelName} 
+                    onselect={handleChange}
+                    data-name="secondLevel">
+                </c-searchable-combobox>
+            </div>
+        </template>
+
+        <template if:true={hasThirdLevel}>
+            <div class="slds-var-m-around_small">
+                <c-searchable-combobox 
+                    label="Terceiro nível" 
+                    options={thirdLevelOptions} 
+                    selected-value={selectedThirdLevelName} 
+                    onselect={handleChange}
+                    data-name="thirdLevel">
+                </c-searchable-combobox>
+            </div>
+        </template>
+
+        <div slot="footer" class="slds-clearfix">
+            <div class="slds-float_right">
+                <lightning-button variant="brand" label="Salvar" icon-name="utility:save" onclick={handleSave}></lightning-button>
+            </div>
+        </div>
+    </lightning-card>
+
+</template>
