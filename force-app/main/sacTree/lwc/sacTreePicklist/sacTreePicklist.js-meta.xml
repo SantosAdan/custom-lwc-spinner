@@ -2,8 +2,33 @@
 <LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>51.0</apiVersion>
     <isExposed>true</isExposed>
+    <masterLabel>Dynamic Dependent Picklist</masterLabel>
     <targets>
-        <target>lightning__HomePage</target>
-        <target>lightning__AppPage</target>
+        <target>lightning__RecordPage</target>
     </targets>
+    <targetConfigs>
+        <targetConfig targets="lightning__RecordPage">
+            <property
+                label="Title"
+                name="cardTitle"
+                type="String"
+                default="Dynamic Dependent Picklist"
+            />
+            <property
+                label="Icon"
+                name="cardIcon"
+                type="String"
+                description="Supports icon name in Salesforce Lightning format. (i.e. standard:case, utility:send)"
+                default="standard:case"
+            />
+            <property 
+                label="Custom Metadata API Name" 
+                name="picklistMdt" 
+                type="String" 
+                datasource="apex://DynamicPicklistDatasource" 
+                description="Must be equals to the sObject page in which this component is set."
+                required="true"
+            />
+        </targetConfig>
+    </targetConfigs>
 </LightningComponentBundle>

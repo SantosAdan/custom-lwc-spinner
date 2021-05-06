@@ -21,6 +21,7 @@ export default class SearchableCombobox extends LightningElement {
 
 		if (value) {
             this.searchString = optionData.filter(option => option.label === value);
+            this.searchString = this.searchString[0].label;
         }
         this.value = value;
         this.optionData = optionData;
@@ -69,14 +70,7 @@ export default class SearchableCombobox extends LightningElement {
             
             this.showDropdown = false;
 
-            this.dispatchEvent(new CustomEvent('select', {
-                detail: {
-                    'option' : {
-                        'label' : this.searchString,
-                        'value' : this.value
-                    }
-                }
-            }));
+            this.notifyOnSelect();
         }
     }
 
@@ -108,16 +102,20 @@ export default class SearchableCombobox extends LightningElement {
             }
             this.searchString = previousLabel;
                  
-            this.dispatchEvent(new CustomEvent('select', {
-                detail: {
-                    'option' : {
-                        'label' : this.searchString,
-                        'value' : this.value
-                    }
-                }
-            }));
+            this.notifyOnSelect();
         }
         
         this.showDropdown = false;
+    }
+
+    notifyOnSelect() {
+        this.dispatchEvent(new CustomEvent('select', {
+            detail: {
+                'option' : {
+                    'label' : this.searchString,
+                    'value' : this.value
+                }
+            }
+        }));
     }
 }

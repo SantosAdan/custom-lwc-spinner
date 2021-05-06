@@ -1,32 +1,25 @@
-import { LightningElement, track } from 'lwc';
+import { LightningElement, track, api, wire } from 'lwc';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import { getRecordNotifyChange } from 'lightning/uiRecordApi';
 
+import obtainLevelMap from '@salesforce/apex/SacTreeController.obtainLevelMap';
+import obtainLevelDepth from '@salesforce/apex/SacTreeController.obtainLevelDepth';
 import obtainFirstLevel from '@salesforce/apex/SacTreeController.obtainFirstLevel';
 import obtainNextLevel from '@salesforce/apex/SacTreeController.obtainNextLevel';
-
-const FIRST_LEVEL = "firstLevel";
-const SECOND_LEVEL = "secondLevel";
-const THIRD_LEVEL = "thirdLevel";
-const FOURTH_LEVEL = "fourthLevel";
+import updateRecord from '@salesforce/apex/SacTreeController.updateRecord';
 
 export default class SacTreePicklist extends LightningElement {
+    @api recordId;
+    @api picklistMdt;
+    @api cardTitle;
+    @api cardIcon;
 
-    @track firstLevelList = [];
-    @track secondLevelList = [];
-    
-    selectedFirstLevelId;
-    selectedFirstLevelName;
+    @track levels = [];
+    @track levelOptionsList = [];
 
-    selectedSecondLevelId;
-    selectedSecondLevelName;
-
-    selectedThirdLevelId;
-    selectedThirdLevelName;
-
-    hasFirstLevel = false;
-    hasSecondLevel = false;
-    hasThirdLevel = false;
-
+    record = undefined;
     isLoading = true;
+    noConfigFound = false;
 
     extractOptionsList(optionList) {
         return optionList.map(item => {
@@ -37,32 +30,57 @@ export default class SacTreePicklist extends LightningElement {
         });
     }
 
-    get firstLevelOptions() {
-        return this.extractOptionsList(this.firstLevelList);
-    }
+    buildLevelOptions(levelOrder, optionList) {
+        return this.levels.map(level => {
+            if (level.order === levelOrder) {
+                return {
+                    ...level,
+                    options: this.extractOptionsList(optionList),
+                    show: true
+                }
+            }
 
-    get secondLevelOptions() {
-        return this.extractOptionsList(this.secondLevelList);
-
-    }
-
-    get thirdLevelOptions() {
-        return this.extractOptionsList(this.thirdLevelList);
-
+            return level;
+        })
     }
 
     connectedCallback() {
-        this.getFirstLevel();
+        obtainLevelMap()
+            .then(result => {
+                console.log(JSON.parse(JSON.stringify(result)));
+            })
+            .catch(error => console.log(error.body.message))
+    }
+
+    @wire(obtainLevelDepth, { metadataConfigName: '$picklistMdt'})
+    wiredLevelDepth({error, data}) {
+        if (data) {
+            let depth = data.length;
+
+            if (depth != 0) {
+                this.levels = data;
+
+                this.levelOptionsList = data.map(level => []);
+
+                this.getFirstLevel();
+            } else {
+                this.noConfigFound = true;
+                this.isLoading = false;
+            }
+        } else if (error) {
+            this.isLoading = false;
+            console.log(error);
+        }
     }
 
     getFirstLevel() {
         this.isLoading = true;
         obtainFirstLevel()
             .then(result => {
-                this.firstLevelList = result;
+                this.levelOptionsList[0] = result;
                 
-                if (this.firstLevelList && this.firstLevelList.length > 0) {
-                    this.hasFirstLevel = true;
+                if (result && result.length > 0) {
+                    this.levels = this.buildLevelOptions(1, result);
                 }
 
                 this.isLoading = false;
@@ -72,20 +90,15 @@ export default class SacTreePicklist extends LightningElement {
             })
     }
 
-    getNextLevelOptions(level, levelParentId) {
+    getNextLevelOptions(levelOrder, levelParentId) {
         this.isLoading = true;
+
         obtainNextLevel({ levelParentId })
             .then(result => {
-                if (level === SECOND_LEVEL) {
-                    this.secondLevelList = result;
-                    if (this.secondLevelList && this.secondLevelList.length > 0) {
-                        this.hasSecondLevel = true;
-                    }
-                } else if (level === THIRD_LEVEL) {
-                    this.thirdLevelList = result;
-                    if (this.thirdLevelList && this.thirdLevelList.length > 0) {
-                        this.hasThirdLevel = true;
-                    }
+                
+                if (result && result.length > 0) {
+                    this.levelOptionsList[levelOrder-1] = result;
+                    this.levels = this.buildLevelOptions(levelOrder, result);
                 }
 
                 this.isLoading = false;
@@ -96,46 +109,76 @@ export default class SacTreePicklist extends LightningElement {
     }
 
     handleChange(event) {
-        const level = event.target.dataset.name;
-
-        if (level === FIRST_LEVEL) {
-            this.clearNextLevelOnChange(SECOND_LEVEL);
-            [this.selectedFirstLevelId, this.selectedFirstLevelName] = this.handleChangeLevel(event, this.firstLevelList, SECOND_LEVEL);
-        } else if (level === SECOND_LEVEL) {
-            this.clearNextLevelOnChange(THIRD_LEVEL);
-            [this.selectedSecondLevelId, this.selectedSecondLevelName] = this.handleChangeLevel(event, this.secondLevelList, THIRD_LEVEL);
-        } else if (level === THIRD_LEVEL) {
-            this.clearNextLevelOnChange(FOURTH_LEVEL);
-            [this.selectedThirdLevelId, this.selectedThirdLevelName] = this.handleChangeLevel(event, this.thirdLevelList, FOURTH_LEVEL);
-        }
+        const levelString = event.target.dataset.name;
+        const levelOrder = parseInt(levelString);
+        
+        this.clearNextLevelOnChange(levelOrder+1);
+        this.handleChangeLevel(event, this.levelOptionsList[levelOrder-1], levelOrder+1);
     }
 
     handleChangeLevel(event, optionList, nextLevel) {
         const selectedName = event.detail.option.value;
         const selectedRecord = optionList.filter(item => item.Name == selectedName);
+        
+        this.levels = this.levels.map(level => {
+            if (level.order == (nextLevel-1)) {
+                return {
+                    ...level,
+                    selectedLevelName: selectedRecord[0].Name,
+                    selectedLevelId: selectedRecord[0].Id
+                }
+            }
+
+            return level;
+        })
 
         this.getNextLevelOptions(nextLevel, selectedRecord[0].Id);
-
-        return [selectedRecord[0].Id, selectedRecord[0].Name];
     }
 
-    clearNextLevelOnChange(level) {
-        if (level === SECOND_LEVEL) {
-            this.hasSecondLevel = false;
-            this.secondLevelList = [];
-            this.selectedSecondLevelName = undefined;
-        }
+    clearNextLevelOnChange(nextLevel) {
+        this.levels = this.levels.map(level => {
+            if (level.order >= nextLevel) {
+                return {
+                    ...level,
+                    options: [],
+                    selectedLevelName: undefined,
+                    selectedLevelId: undefined,
+                    show: false
+                }
+            }
 
-        if (level === SECOND_LEVEL || level === THIRD_LEVEL) {
-            this.hasThirdLevel = false;
-            this.thirdLevelList = [];
-            this.selectedThirdLevelName = undefined;
-        }
+            return level;
+        });
+
+        this.levelOptionsList[nextLevel] = [];
     }
 
     handleSave(event) {
-        console.log(this.selectedFirstLevelName);
-        console.log(this.selectedSecondLevelName);
-        console.log(this.selectedThirdLevelName);
+        this.isLoading = true;
+        updateRecord({ recordId: this.recordId, levelsJson: JSON.stringify(this.levels) })
+            .then(() => {
+                this.dispatchEvent(
+                    new ShowToastEvent({
+                        title: 'Sucesso!',
+                        message: `${this.picklistMdt} atualizado.`,
+                        variant: 'success'
+                    })
+                );
+                
+                getRecordNotifyChange([{ recordId: this.recordId }]);
+                
+                this.isLoading = false;
+            })
+            .catch(error => {
+                this.dispatchEvent(
+                    new ShowToastEvent({
+                        title: 'Erro!',
+                        message: error.body.message,
+                        variant: 'error'
+                    })
+                );
+
+                this.isLoading = false;
+            });
     }
 }
