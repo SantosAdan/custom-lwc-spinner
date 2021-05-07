@@ -11,24 +11,54 @@
             </div>
         </template>
 
-        <template for:each={levels} for:item="level">
-            <template if:true={level.show}>
-                <div key={level.order} class="slds-var-m-around_small">
-                    <c-searchable-combobox 
-                        label={level.fieldLabel} 
-                        options={level.options} 
-                        selected-value={level.selectedLevelName} 
-                        onselect={handleChange}
-                        data-name={level.order}>
-                    </c-searchable-combobox>
-                </div>
+        <template if:true={readOnly}>
+            <template for:each={fields} for:item="field">
+                <lightning-input key={field.label} class="slds-var-m-around_small" label={field.label} value={field.value} disabled="true"></lightning-input>
+            </template>
+        </template>
+
+        <template if:false={readOnly}>
+            <template for:each={levels} for:item="level">
+                <template if:true={level.show}>
+                    <div key={level.order} class="slds-var-m-around_small">
+                        <c-searchable-combobox 
+                            label={level.fieldLabel} 
+                            options={level.options} 
+                            selected-value={level.selectedLevelName} 
+                            onselect={handleChange}
+                            data-name={level.order}>
+                        </c-searchable-combobox>
+                    </div>
+                </template>
             </template>
         </template>
 
         <template if:false={noConfigFound}>
             <div slot="footer" class="slds-clearfix">
                 <div class="slds-float_right">
-                    <lightning-button variant="brand" label="Salvar" icon-name="utility:save" onclick={handleSave}></lightning-button>
+                    <template if:false={readOnly}>
+                        <lightning-button 
+                            class="slds-var-p-right_x-small" 
+                            variant="destructive" 
+                            label="Cancelar" 
+                            icon-name="utility:close" 
+                            onclick={handleCancel}>
+                        </lightning-button>
+                        <lightning-button 
+                            variant="brand" 
+                            label="Salvar" 
+                            icon-name="utility:save" 
+                            onclick={handleSave}>
+                        </lightning-button>
+                    </template>
+                    <template if:true={readOnly}>
+                        <lightning-button 
+                            variant="brand" 
+                            label="Editar" 
+                            icon-name="utility:edit" 
+                            onclick={handleEdit}>
+                        </lightning-button>
+                    </template>
                 </div>
             </div>
         </template>

@@ -34,7 +34,7 @@ public with sharing class SacTreeController {
   @AuraEnabled
   public static Map<Id, List<SacTree__c>> obtainLevelMap() {
     Map<Id, List<SacTree__c>> treesByParentLevel = new Map<Id, List<SacTree__c>>();
-    List<SacTree__c> trees = [SELECT Id, Name, ParentLevel__c FROM SacTree__c ORDER BY ParentLevel__c NULLS FIRST LIMIT 10000];
+    List<SacTree__c> trees = [SELECT Id, Name, ParentLevel__c FROM SacTree__c ORDER BY Name ASC, ParentLevel__c NULLS FIRST LIMIT 10000];
 
     for (SACTree__c tree : trees) {
       if (treesByParentLevel.containsKey(tree.ParentLevel__c)) {
@@ -47,45 +47,56 @@ public with sharing class SacTreeController {
     return treesByParentLevel;
   }
 
+  @AuraEnabled
+  public static List<RecordInfo> obtainRecord(Id recordId, String metadataConfigName) {
+    try {
+      List<DynamicPicklist__mdt> picklistTypes = DynamicPicklistSelector.findByNameWithLevels(
+        metadataConfigName
+      );
+      String fields = '';
+      for (DynamicPicklistLevel__mdt level : picklistTypes[0].DynamicPicklistLevels__r) {
+        fields += level.FieldMapping__c + ', ';
+      }
+
+      String query = 'SELECT Id, ';
+      query += fields.substringBeforeLast(',');
+      query += ' FROM ' + picklistTypes[0].sObject__c;
+      query += ' WHERE Id = :recordId';
+
+      sObject record = Database.query(query)[0];
+
+      List<RecordInfo> recordFields = new List<RecordInfo>();
+      
+      for (DynamicPicklistLevel__mdt level : picklistTypes[0].DynamicPicklistLevels__r) {
+        RecordInfo info = new RecordInfo();
+        info.label = getFieldLabel(picklistTypes[0].sObject__c, level.FieldMapping__c);
+        info.value = (String) record.get(level.FieldMapping__c);
+        recordFields.add(info);
+      }
+
+      return recordFields;
+    } catch (Exception e) {
+      throw new AuraHandledException(e.getMessage());
+    }
+  }
+
   // @AuraEnabled
-  // public static void obtainRecord(Id recordId, String metadataConfigName) {
+  // public static List<SACTree__c> obtainFirstLevel() {
   //   try {
-  //     List<DynamicPicklist__mdt> picklistTypes = DynamicPicklistSelector.findByNameWithLevels(
-  //       metadataConfigName
-  //     );
-  //     String fields = '';
-  //     for (DynamicPicklistLevel__mdt level : picklistTypes[0].DynamicPicklistLevels__r) {
-  //       fields += level.FieldMapping__c + ', ';
-  //     }
-
-  //     String query = 'SELECT Id, ';
-  //     query += fields.substringBeforeLast(',');
-  //     query += ' FROM ' + picklistTypes[0].sObject__c;
-  //     query += ' WHERE Id = :recordId';
-
-  //     sObject record = Database.query(query)[0];
+  //     return SacTreeSelector.getTreeOptionListByLevel(FIRST_LEVEL);
   //   } catch (Exception e) {
   //     throw new AuraHandledException(e.getMessage());
   //   }
   // }
 
-  @AuraEnabled
-  public static List<SACTree__c> obtainFirstLevel() {
-    try {
-      return SacTreeSelector.getTreeOptionListByLevel(FIRST_LEVEL);
-    } catch (Exception e) {
-      throw new AuraHandledException(e.getMessage());
-    }
-  }
-
-  @AuraEnabled
-  public static List<SACTree__c> obtainNextLevel(Id levelParentId) {
-    try {
-      return SacTreeSelector.getTreeOptionListByParentId(levelParentId);
-    } catch (Exception e) {
-      throw new AuraHandledException(e.getMessage());
-    }
-  }
+  // @AuraEnabled
+  // public static List<SACTree__c> obtainNextLevel(Id levelParentId) {
+  //   try {
+  //     return SacTreeSelector.getTreeOptionListByParentId(levelParentId);
+  //   } catch (Exception e) {
+  //     throw new AuraHandledException(e.getMessage());
+  //   }
+  // }
 
   @AuraEnabled
   public static void updateRecord(Id recordId, String levelsJson) {

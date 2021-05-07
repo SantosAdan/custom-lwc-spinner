@@ -1,11 +1,10 @@
-import { LightningElement, track, api, wire } from 'lwc';
+import { LightningElement, track, api } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import { getRecordNotifyChange } from 'lightning/uiRecordApi';
 
 import obtainLevelMap from '@salesforce/apex/SacTreeController.obtainLevelMap';
 import obtainLevelDepth from '@salesforce/apex/SacTreeController.obtainLevelDepth';
-import obtainFirstLevel from '@salesforce/apex/SacTreeController.obtainFirstLevel';
-import obtainNextLevel from '@salesforce/apex/SacTreeController.obtainNextLevel';
+import obtainRecord from '@salesforce/apex/SacTreeController.obtainRecord';
 import updateRecord from '@salesforce/apex/SacTreeController.updateRecord';
 
 export default class SacTreePicklist extends LightningElement {
@@ -16,10 +15,13 @@ export default class SacTreePicklist extends LightningElement {
 
     @track levels = [];
     @track levelOptionsList = [];
+    @track levelsMap;
 
-    record = undefined;
+    depth = 0;
+    fields = undefined;
     isLoading = true;
     noConfigFound = false;
+    readOnly = true;
 
     extractOptionsList(optionList) {
         return optionList.map(item => {
@@ -44,68 +46,64 @@ export default class SacTreePicklist extends LightningElement {
         })
     }
 
+    getRecord() {
+        obtainRecord({ recordId: this.recordId, metadataConfigName: this.picklistMdt })
+            .then(data => {
+                this.fields = data;
+            })
+            .catch(error => console.log(error.body.message));
+    }
+
     connectedCallback() {
+        this.getRecord();
+
+        obtainLevelDepth({ metadataConfigName: this.picklistMdt })
+            .then(data => {
+                this.depth = data.length;
+
+                if (this.depth != 0) {
+                    this.levels = data;
+
+                    this.levelOptionsList = data.map(level => []);
+
+                    this.obtainMap();
+                } else {
+                    this.noConfigFound = true;
+                    this.isLoading = false;
+                }
+            });        
+    }
+
+    obtainMap() {
         obtainLevelMap()
             .then(result => {
-                console.log(JSON.parse(JSON.stringify(result)));
+                this.levelsMap = result;
+
+                this.getFirstLevel();
             })
             .catch(error => console.log(error.body.message))
     }
 
-    @wire(obtainLevelDepth, { metadataConfigName: '$picklistMdt'})
-    wiredLevelDepth({error, data}) {
-        if (data) {
-            let depth = data.length;
-
-            if (depth != 0) {
-                this.levels = data;
-
-                this.levelOptionsList = data.map(level => []);
-
-                this.getFirstLevel();
-            } else {
-                this.noConfigFound = true;
-                this.isLoading = false;
-            }
-        } else if (error) {
-            this.isLoading = false;
-            console.log(error);
-        }
-    }
-
     getFirstLevel() {
-        this.isLoading = true;
-        obtainFirstLevel()
-            .then(result => {
-                this.levelOptionsList[0] = result;
-                
-                if (result && result.length > 0) {
-                    this.levels = this.buildLevelOptions(1, result);
-                }
+        this.levelOptionsList[0] = this.levelsMap.null;
 
-                this.isLoading = false;
-            })
-            .catch(error => {
-                console.log(error.message.body);
-            })
+        if (this.levelOptionsList[0] && this.levelOptionsList[0].length > 0) {
+            this.levels = this.buildLevelOptions(1, this.levelOptionsList[0]);
+        }
+
+        this.isLoading = false;
     }
 
     getNextLevelOptions(levelOrder, levelParentId) {
-        this.isLoading = true;
-
-        obtainNextLevel({ levelParentId })
-            .then(result => {
-                
-                if (result && result.length > 0) {
-                    this.levelOptionsList[levelOrder-1] = result;
-                    this.levels = this.buildLevelOptions(levelOrder, result);
-                }
-
-                this.isLoading = false;
-            })
-            .catch(error => {
-                console.log(error.message.body);
-            })
+        if (levelOrder > this.depth) {
+            return;
+        }
+        
+        this.levelOptionsList[levelOrder-1] = this.levelsMap[levelParentId];
+        
+        if (this.levelOptionsList[levelOrder-1] && this.levelOptionsList[levelOrder-1].length > 0) {
+            this.levels = this.buildLevelOptions(levelOrder, this.levelOptionsList[levelOrder-1]);
+        }
     }
 
     handleChange(event) {
@@ -113,7 +111,10 @@ export default class SacTreePicklist extends LightningElement {
         const levelOrder = parseInt(levelString);
         
         this.clearNextLevelOnChange(levelOrder+1);
-        this.handleChangeLevel(event, this.levelOptionsList[levelOrder-1], levelOrder+1);
+        this.isLoading = true;
+        setTimeout(() => {
+            this.handleChangeLevel(event, this.levelOptionsList[levelOrder-1], levelOrder+1);
+        }, 250);
     }
 
     handleChangeLevel(event, optionList, nextLevel) {
@@ -132,6 +133,7 @@ export default class SacTreePicklist extends LightningElement {
             return level;
         })
 
+        this.isLoading = false;
         this.getNextLevelOptions(nextLevel, selectedRecord[0].Id);
     }
 
@@ -166,8 +168,10 @@ export default class SacTreePicklist extends LightningElement {
                 );
                 
                 getRecordNotifyChange([{ recordId: this.recordId }]);
+                this.getRecord();
                 
                 this.isLoading = false;
+                this.readOnly = true;
             })
             .catch(error => {
                 this.dispatchEvent(
@@ -180,5 +184,13 @@ export default class SacTreePicklist extends LightningElement {
 
                 this.isLoading = false;
             });
+    }
+
+    handleEdit() {
+        this.readOnly = false;
+    }
+
+    handleCancel() {
+        this.readOnly = true;
     }
 }
